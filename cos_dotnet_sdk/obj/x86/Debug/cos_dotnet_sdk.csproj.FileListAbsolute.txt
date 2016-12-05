@@ -1,0 +1,7 @@
+D:\cos-dotnet-sdk\cos_dotnet_sdk\bin\Debug\cos api sdk.exe.config
+D:\cos-dotnet-sdk\cos_dotnet_sdk\bin\Debug\cos api sdk.exe
+D:\cos-dotnet-sdk\cos_dotnet_sdk\bin\Debug\cos api sdk.pdb
+D:\cos-dotnet-sdk\cos_dotnet_sdk\bin\Debug\Newtonsoft.Json.dll
+D:\cos-dotnet-sdk\cos_dotnet_sdk\obj\x86\Debug\cos_dotnet_sdk.csprojResolveAssemblyReference.cache
+D:\cos-dotnet-sdk\cos_dotnet_sdk\obj\x86\Debug\cos api sdk.exe
+D:\cos-dotnet-sdk\cos_dotnet_sdk\obj\x86\Debug\cos api sdk.pdb
