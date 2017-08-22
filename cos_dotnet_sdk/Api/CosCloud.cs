@@ -358,12 +358,13 @@ namespace QCloud.CosApi.Api
         /// <param name="remotePath">远程文件路径</param>
         /// <param name="localPath">本地文件路径</param>
         /// <param name="bizAttribute">biz属性</param>
-        /// <param name="sliceSize">切片大小（字节）,默认为1M</param>
+        /// <param name="sliceSize">切片大小（字节）,默认为1M,目前只支持1M</param>
         /// <param name="insertOnly">是否覆盖同名文件</param>
         /// <returns></returns>
         public string SliceUploadInit(string bucketName, string remotePath, string localPath, string fileSha,
                                        string bizAttribute = "", int sliceSize = SLICE_SIZE.SLIZE_SIZE_1M, int insertOnly = 1)
         {
+            sliceSize = SLICE_SIZE.SLIZE_SIZE_1M;
             var url = generateURL(bucketName, remotePath);
             
             var fileSize = new FileInfo(localPath).Length;
@@ -509,7 +510,7 @@ namespace QCloud.CosApi.Api
         /// <param name="remotePath">远程文件路径</param>
         /// <param name="localPath">本地文件路径</param>
         /// <param name="bizAttribute">biz属性</param>
-        /// <param name="sliceSize">切片大小（字节）,默认为1M</param>
+        /// <param name="sliceSize">切片大小（字节）,默认为1M,目前只支持1M</param>
         /// <param name="insertOnly">是否覆盖同名文件</param>
         /// <param name="paras"></param> 
         /// <returns></returns>
@@ -546,9 +547,10 @@ namespace QCloud.CosApi.Api
                 obj = (JObject)JsonConvert.DeserializeObject(result);
                 if((int)obj["code"] != 0)
                 {
-                    if (retryCount < 3)
+                    if (retryCount < 10)
                     {
                         ++retryCount;
+                        offset -= sliceSize;
                         //Console.WriteLine("重试...");
                         continue;
                     }
