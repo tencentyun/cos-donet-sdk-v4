@@ -271,7 +271,11 @@ namespace QCloud.CosApi.Api
 			if (!File.Exists(localPath)) {
 				return constructResult(ERRORCode.ERROR_CODE_FILE_NOT_EXIST,"local file not exist");
 			}
-
+			
+            if (remotePath.EndsWith("/")) {
+                return constructResult(ERRORCode.ERROR_CODE_PARAMETER_ERROE, "file path can not end with '/'");
+            }
+			
 			string bizAttribute = "";
 			if (parameterDic != null && parameterDic.ContainsKey(CosParameters.PARA_BIZ_ATTR))
 				bizAttribute = parameterDic[CosParameters.PARA_BIZ_ATTR];
