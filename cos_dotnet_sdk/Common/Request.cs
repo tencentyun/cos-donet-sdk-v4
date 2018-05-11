@@ -135,7 +135,12 @@ namespace QCloud.CosApi.Common
                 using (var s = response.GetResponseStream())
                 {
                     var reader = new StreamReader(s, Encoding.UTF8);
-                    return reader.ReadToEnd();
+                    var rsp_data = reader.ReadToEnd();
+                    if (response != null) 
+                    {
+                        response.Close();
+                    }
+                    return rsp_data;
                 }
             }
             catch (WebException we)
