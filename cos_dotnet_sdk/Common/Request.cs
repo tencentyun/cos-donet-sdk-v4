@@ -16,8 +16,6 @@ namespace QCloud.CosApi.Common
     /// </summary>
     class Request
     {
-        HttpWebRequest request;
-  
         public string SendRequest(string url, ref Dictionary<string, object> data, HttpMethod requestMethod,
             ref Dictionary<string, string> header, int timeOut, string localPath = null, long offset = -1, int sliceSize = 0)
         {
@@ -35,6 +33,8 @@ namespace QCloud.CosApi.Common
                     paramStr = paramStr.TrimEnd('&');
                     url += (url.EndsWith("?") ? "&" : "?") + paramStr;
                 }
+
+                HttpWebRequest request;
 
                 request = (HttpWebRequest)HttpWebRequest.Create(url);
                 request.Accept = CosDefaultValue.ACCEPT;

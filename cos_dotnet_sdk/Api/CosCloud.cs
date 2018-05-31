@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using QCloud.CosApi.Common;
 using QCloud.CosApi.Util;
 using System.Web;
@@ -11,9 +11,9 @@ using Newtonsoft.Json.Linq;
 
 namespace QCloud.CosApi.Api
 {
+
 	class CosCloud
 	{
-		const string COSAPI_CGI_URL = "http://sh.file.myqcloud.com/files/v2/";
 		//文件大于8M时采用分片上传,小于等于8M时采用单文件上传
 		const int SLICE_UPLOAD_FILE_SIZE = 8 * 1024 * 1024;
 		//用户计算用户签名超时时间
@@ -25,6 +25,7 @@ namespace QCloud.CosApi.Api
 		private string secretKey;
 		private int timeOut;
 		private Request httpRequest;
+        private string region = "sh"; //默认上海,可以通过SetRegion方法修改
 
 		/// <summary>
 		/// CosCloud 构造方法
@@ -40,7 +41,16 @@ namespace QCloud.CosApi.Api
 			this.secretKey = secretKey;
 			this.timeOut = timeOut * 1000;
 			this.httpRequest = new Request();
-		} 
+        } 
+
+        /// <summary>
+        /// 设置Bucket所在的Region,例如上海sh
+        /// </summary>
+        /// <param name="region">地域region</param>
+        public void SetRegion(string region)
+        {
+            this.region = region;
+        }
 
 		/// <summary>
 		/// 更新文件夹信息
@@ -261,12 +271,13 @@ namespace QCloud.CosApi.Api
         /// <param name="remotePath">远程文件路径</param>
         /// <param name="localPath">本地文件路径</param>
         /// <param name="parameterDic">参数Dictionary</param>
+        /// <param name="isParallel">是否启用线程池并发上传</param>
         /// 包含如下可选参数
         /// bizAttribute：文件属性
         /// insertOnly： 0:同名文件覆盖, 1:同名文件不覆盖,默认1
         /// sliceSize: 分片大小，可选取值为:64*1024 512*1024，1*1024*1024，2*1024*1024，3*1024*1024
         /// <returns></returns>
-        public string UploadFile(string bucketName, string remotePath, string localPath, Dictionary<string, string>  parameterDic = null)
+        public string UploadFile(string bucketName, string remotePath, string localPath, Dictionary<string, string>  parameterDic = null, bool isParallel = false)
 		{
 			if (!File.Exists(localPath)) {
 				return constructResult(ERRORCode.ERROR_CODE_FILE_NOT_EXIST,"local file not exist");
@@ -289,21 +300,19 @@ namespace QCloud.CosApi.Api
 					return constructResult(ERRORCode.ERROR_CODE_PARAMETER_ERROE,"parameter insertOnly value invalidate");
 				}
 			}
-			
-			
-			var fileSize = new FileInfo(localPath).Length;
-			if (fileSize <= SLICE_UPLOAD_FILE_SIZE) {
+
+            var fileSize = new FileInfo(localPath).Length;
+			if (fileSize <= SLICE_UPLOAD_FILE_SIZE) { 
                 return Upload(bucketName, remotePath, localPath, bizAttribute, insertOnly);
 			} else {
                 //分片上传
 				int sliceSize = SLICE_SIZE.SLIZE_SIZE_1M;
-
                 if (parameterDic != null && parameterDic.ContainsKey(CosParameters.PARA_SLICE_SIZE)){
 					sliceSize = Int32.Parse(parameterDic[CosParameters.PARA_SLICE_SIZE]);
                     Console.WriteLine("slice size:" + sliceSize);
 				}
 				int slice_size = getSliceSize(sliceSize);
-				return SliceUploadFile(bucketName, remotePath, localPath, bizAttribute, slice_size,insertOnly);
+				return SliceUploadFile(bucketName, remotePath, localPath, bizAttribute, slice_size,insertOnly, isParallel);
 			}
 		}
 
@@ -390,9 +399,6 @@ namespace QCloud.CosApi.Api
             var sign = Sign.Signature(appId, secretId, secretKey, expired, bucketName);
             header.Add("Authorization", sign);
             
-            Console.WriteLine(sign);
-            Console.WriteLine(url + appId + " " + secretId + secretId + expired + bucketName);
-
             return httpRequest.SendRequest(url, ref data, HttpMethod.Post, ref header, timeOut);
         }
 
@@ -420,7 +426,9 @@ namespace QCloud.CosApi.Api
 
             var header = new Dictionary<string, string>();
             header.Add("Authorization", sign);
-            return httpRequest.SendRequest(url, ref data, HttpMethod.Post, ref header, timeOut, localPath, offset,sliceSise);
+            string result = httpRequest.SendRequest(url, ref data, HttpMethod.Post, ref header, timeOut, localPath, offset,sliceSise);
+            //Console.WriteLine(result);
+            return result;
         }
 
         /// <summary>
@@ -516,58 +524,84 @@ namespace QCloud.CosApi.Api
         /// <param name="bizAttribute">biz属性</param>
         /// <param name="sliceSize">切片大小（字节）,默认为1M,目前只支持1M</param>
         /// <param name="insertOnly">是否覆盖同名文件</param>
+        /// <param name="isParallel">是否启用线程池并发上传</param>
         /// <param name="paras"></param> 
         /// <returns></returns>
-        public string SliceUploadFile(string bucketName, string remotePath, string localPath, 
-		                               string bizAttribute="", int sliceSize = SLICE_SIZE.SLIZE_SIZE_1M, int insertOnly = 1)
-		{
+        public string SliceUploadFile(string bucketName, string remotePath, string localPath,
+                                       string bizAttribute = "", int sliceSize = SLICE_SIZE.SLIZE_SIZE_1M, int insertOnly = 1, bool isParallel = false)
+        {
             var fileSha = SHA1.GetFileSHA1(localPath);
             var fileSize = new FileInfo(localPath).Length;
             var result = SliceUploadInit(bucketName, remotePath, localPath, fileSha, bizAttribute, sliceSize, insertOnly);
             var obj = (JObject)JsonConvert.DeserializeObject(result);
-            if((int)obj["code"] != 0)
+            if ((int)obj["code"] != 0)
             {
-                return result; 
-            }
-            
-            var data = obj["data"];
-            if(data["access_url"] != null)
-            {
-                var accessUrl = data["access_url"];
-                //Console.WriteLine("命中秒传" + accessUrl);
                 return result;
             }
 
-            int retryCount = 0;
+            var data = obj["data"];
+            if (data["access_url"] != null)
+            {
+                var accessUrl = data["access_url"];
+                Console.WriteLine("命中秒传" + data);
+                return result;
+            }
+
+
             var session = data["session"].ToString();
             sliceSize = (int)data["slice_size"];
 
             var sign = Sign.Signature(appId, secretId, secretKey, getExpiredTime(), bucketName);
-            
-            //总共重试三次
-            for (long offset = 0; offset < fileSize; offset+=sliceSize)
+
+            if (isParallel)
             {
-                result = SliceUploadData(bucketName, remotePath, localPath, fileSha, session, offset, sliceSize,sign);
-                obj = (JObject)JsonConvert.DeserializeObject(result);
-                if((int)obj["code"] != 0)
+                var tasks = new List<Task<string>>();
+                for (long offset = 0; offset < fileSize; offset += sliceSize)
                 {
-                    if (retryCount < 10)
+                    long localOffset = offset;
+                    tasks.Add(Task.Factory.StartNew<string>(() => SliceUploadData(bucketName, remotePath, localPath, fileSha, session, localOffset, sliceSize, sign)));
+                }
+
+                Task.WaitAll(tasks.ToArray());
+
+                foreach (var item in tasks)
+                {
+                    Console.WriteLine(item.Result);
+                    obj = (JObject)JsonConvert.DeserializeObject(item.Result);
+                    if ((int)obj["code"] != 0)
                     {
-                        ++retryCount;
-                        offset -= sliceSize;
-                        //Console.WriteLine("重试...");
-                        continue;
+                        return item.Result;
                     }
-                    else
+                }
+            }
+            else
+            {
+                int retryCount = 0;
+                for (long offset = 0; offset < fileSize; offset += sliceSize)
+                {
+                    result = SliceUploadData(bucketName, remotePath, localPath, fileSha, session, offset, sliceSize, sign);
+                    obj = (JObject)JsonConvert.DeserializeObject(result);
+                    if ((int)obj["code"] != 0)
                     {
-                        //Console.WriteLine("upload fail");
-                        return result;
+                        //总共重试10次
+                        if (retryCount < 10)
+                        {
+                            ++retryCount;
+                            offset -= sliceSize;
+                            //Console.WriteLine("重试...");
+                            continue;
+                        }
+                        else
+                        {
+                            //Console.WriteLine("upload fail");
+                            return result;
+                        }
                     }
                 }
             }
 
             return SliceUploadFinish(bucketName, remotePath, localPath, fileSha, session);
-		}
+        }
         
 
 		/// <summary>
@@ -813,7 +847,7 @@ namespace QCloud.CosApi.Api
 		/// <returns></returns>	
 		private long getExpiredTime()
 		{
-			return DateTime.Now.ToUnixTime() / 1000 + SIGN_EXPIRED_TIME;
+			return DateTime.UtcNow.ToUnixTime() / 1000 + SIGN_EXPIRED_TIME;
 		}
 		
 		/// <summary>
@@ -848,7 +882,7 @@ namespace QCloud.CosApi.Api
 		/// <returns></returns>
 		private string generateURL(string bucketName, string remotePath)
 		{
-			string url = COSAPI_CGI_URL + this.appId + "/" + bucketName + HttpUtils.EncodeRemotePath(remotePath);
+			string url = "http://" + this.region + ".file.myqcloud.com/files/v2/" + this.appId + "/" + bucketName + HttpUtils.EncodeRemotePath(remotePath);
 			return url;
 		}
 		
@@ -858,7 +892,7 @@ namespace QCloud.CosApi.Api
 		/// <returns></returns>
 		private string generateURL(string bucketName, string remotePath, string prefix)
 		{
-			string url = COSAPI_CGI_URL + this.appId + "/" + bucketName + HttpUtils.EncodeRemotePath(remotePath) + HttpUtility.UrlEncode(prefix);
+			string url = "http://" + this.region + ".file.myqcloud.com/files/v2/" + this.appId + "/" + bucketName + HttpUtils.EncodeRemotePath(remotePath) + HttpUtility.UrlEncode(prefix);
 			return url;
 		}
 		
