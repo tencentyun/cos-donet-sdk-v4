@@ -14,9 +14,9 @@ namespace QCloud.CosApi
     class CosDemo
     {
 
-        const int APP_ID = 1251668577;
-        const string SECRET_ID = "AKIDWtTCBYjM5OwLB9CAwA1Qb2ThTSUjfGFO";
-        const string SECRET_KEY = "FZjRSu0mJ9YJijVXXY57MAdCl4uylaA7";
+        const int APP_ID = 12516677;
+        const string SECRET_ID = "AKIDWtTCBM5OwLB9CAwA1Qb2ThTSUjfGFO";
+        const string SECRET_KEY = "FZjRSu0mJ9ijVXXY57MAdCl4uylaA7";
 
         static void Main(string[] args)
         {
@@ -24,7 +24,7 @@ namespace QCloud.CosApi
             {
                 var result = "";
 
-                const string bucketName = "kitmansh";
+                const string bucketName = "sksks";
                 const string localPath = @"E:\\testdata\a\a.tar";
                 const string remotePath = "/sdktest/content.pak";
                 const string folder = "/sdktest/";
@@ -51,16 +51,12 @@ namespace QCloud.CosApi
 
 
                 //上传文件（不论文件是否分片，均使用本接口）
-                Stopwatch sw = new Stopwatch();
-                sw.Start();
                 var uploadParasDic = new Dictionary<string, string>();
                 uploadParasDic.Add(CosParameters.PARA_BIZ_ATTR, "");
                 uploadParasDic.Add(CosParameters.PARA_INSERT_ONLY, "0");
 
                 result = cos.UploadFile(bucketName, remotePath, localPath, uploadParasDic, true);
-                sw.Stop();
                 Console.WriteLine("上传文件:" + result);
-                Console.WriteLine(sw.Elapsed.TotalMilliseconds);
 
 
                 //获取文件属性
