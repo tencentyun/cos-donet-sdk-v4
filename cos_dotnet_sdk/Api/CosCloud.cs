@@ -555,6 +555,7 @@ namespace QCloud.CosApi.Api
 
             if (isParallel)
             {
+		threadPool.SetMinThreads(30, 30);
                 var tasks = new List<Task<string>>();
                 for (long offset = 0; offset < fileSize; offset += sliceSize)
                 {
