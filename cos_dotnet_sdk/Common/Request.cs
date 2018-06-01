@@ -21,7 +21,6 @@ namespace QCloud.CosApi.Common
         {
             try
             {
-                Console.WriteLine("url:" + url);
                 System.Net.ServicePointManager.Expect100Continue = false;
                 if (requestMethod == HttpMethod.Get)
                 {
