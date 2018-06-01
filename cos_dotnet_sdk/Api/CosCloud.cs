@@ -572,7 +572,6 @@ namespace QCloud.CosApi.Api
                         return SliceUploadData(bucketName, remotePath, localPath, fileSha, session, localOffset, sliceSize, sign);
                     }
                     ));
-
       
                 }
 

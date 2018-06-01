@@ -60,7 +60,7 @@ namespace QCloud.CosApi.Common
 
     public static class CosDefaultValue
     {
-        public const string USER_AGENT_VERSION = "cos-dotnet-sdk-v4.2";
+        public const string USER_AGENT_VERSION = "cos-dotnet-sdk-v4.2.1";
 
         public const string ACCEPT = "*/*";
     }

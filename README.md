@@ -9,7 +9,7 @@ dotnet sdk for [腾讯云对象存储服务](http://wiki.qcloud.com/wiki/COS%E4%
 
 ## 修改配置
 修改Demo.cs内的appid等信息为您的配置
-修改CosCloud.cs内的URL为您所在园区的配置,例如上海：http://sh.file.myqcloud.com/files/v2/，天津：http://tj.file.myqcloud.com/files/v2/
+通过SetRegion方法设置园区，默认上海sh
 
 ## 上传、查询、删除程序示例
 请参考Demo.cs
