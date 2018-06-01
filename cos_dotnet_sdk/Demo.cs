@@ -14,9 +14,9 @@ namespace QCloud.CosApi
     class CosDemo
     {
 
-        const int APP_ID = 1251668577;
-        const string SECRET_ID = "AKIDWtTCBYjM5OwLB9CAwA1Qb2ThTSUjfGFO";
-        const string SECRET_KEY = "FZjRSu0mJ9YJijVXXY57MAdCl4uylaA7";
+        const int APP_ID = 12516577;
+        const string SECRET_ID = "AKIDWtTCBYjM5OwLB9CAwAb2ThTSUjfGFO";
+        const string SECRET_KEY = "FZjRSu0mJ9YJijVXXYMAdCl4uylaA7";
 
         static void Main(string[] args)
         {
@@ -25,15 +25,16 @@ namespace QCloud.CosApi
                 var result = "";
 
                 const string bucketName = "kitmansh";
-                const string localPath = @"E:\\testdata\a\a.tar";
-                const string remotePath = "/sdktest/content.pak";
+                const string localPath = @"C:\\testdata\a";
+                const string remotePath = "/sdktest/a";
                 const string folder = "/sdktest/";
 
                 //创建cos对象
                 var cos = new CosCloud(APP_ID, SECRET_ID, SECRET_KEY);
 
                 cos.SetRegion("sh");
-
+                
+                
                 //创建文件夹
                 result = cos.CreateFolder(bucketName, folder);
                 Console.WriteLine("创建文件目录：" + result);
@@ -48,7 +49,7 @@ namespace QCloud.CosApi
                 //获取文件夹属性
                 result = cos.GetFolderStat(bucketName, folder);
                 Console.WriteLine("查询文件夹属性:" + result);
-
+                
 
                 //上传文件（不论文件是否分片，均使用本接口）
                 Stopwatch sw = new Stopwatch();
@@ -57,12 +58,12 @@ namespace QCloud.CosApi
                 uploadParasDic.Add(CosParameters.PARA_BIZ_ATTR, "");
                 uploadParasDic.Add(CosParameters.PARA_INSERT_ONLY, "0");
 
-                result = cos.UploadFile(bucketName, remotePath, localPath, uploadParasDic, true);
+                result = cos.UploadFile(bucketName, remotePath, localPath, uploadParasDic, true, 20);
                 sw.Stop();
                 Console.WriteLine("上传文件:" + result);
                 Console.WriteLine(sw.Elapsed.TotalMilliseconds);
 
-
+                
                 //获取文件属性
                 result = cos.GetFileStat(bucketName, remotePath);
                 Console.WriteLine("获取文件属性:" + result);
@@ -111,6 +112,7 @@ namespace QCloud.CosApi
                 //删除文件夹
                 result = cos.DeleteFolder(bucketName, folder);
                 Console.WriteLine("删除文件夹:" + result);
+               
 
             }
             catch (Exception e)

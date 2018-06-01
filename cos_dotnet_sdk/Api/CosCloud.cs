@@ -8,6 +8,7 @@ using System.Web;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Threading;
 
 namespace QCloud.CosApi.Api
 {
@@ -272,12 +273,13 @@ namespace QCloud.CosApi.Api
         /// <param name="localPath">本地文件路径</param>
         /// <param name="parameterDic">参数Dictionary</param>
         /// <param name="isParallel">是否启用线程池并发上传</param>
+        /// <param name="minConcurrency">启用并发上传，可以这是最小的并发度，0为系统决定</param>
         /// 包含如下可选参数
         /// bizAttribute：文件属性
         /// insertOnly： 0:同名文件覆盖, 1:同名文件不覆盖,默认1
         /// sliceSize: 分片大小，可选取值为:64*1024 512*1024，1*1024*1024，2*1024*1024，3*1024*1024
         /// <returns></returns>
-        public string UploadFile(string bucketName, string remotePath, string localPath, Dictionary<string, string>  parameterDic = null, bool isParallel = false)
+        public string UploadFile(string bucketName, string remotePath, string localPath, Dictionary<string, string>  parameterDic = null, bool isParallel = false, int minConcurrency = 0)
 		{
 			if (!File.Exists(localPath)) {
 				return constructResult(ERRORCode.ERROR_CODE_FILE_NOT_EXIST,"local file not exist");
@@ -312,7 +314,7 @@ namespace QCloud.CosApi.Api
                     Console.WriteLine("slice size:" + sliceSize);
 				}
 				int slice_size = getSliceSize(sliceSize);
-				return SliceUploadFile(bucketName, remotePath, localPath, bizAttribute, slice_size,insertOnly, isParallel);
+				return SliceUploadFile(bucketName, remotePath, localPath, bizAttribute, slice_size,insertOnly, isParallel, minConcurrency);
 			}
 		}
 
@@ -525,10 +527,11 @@ namespace QCloud.CosApi.Api
         /// <param name="sliceSize">切片大小（字节）,默认为1M,目前只支持1M</param>
         /// <param name="insertOnly">是否覆盖同名文件</param>
         /// <param name="isParallel">是否启用线程池并发上传</param>
+        /// <param name="minConcurrency">启用并发上传，可以这是最小的并发度，0为系统决定</param>
         /// <param name="paras"></param> 
         /// <returns></returns>
         public string SliceUploadFile(string bucketName, string remotePath, string localPath,
-                                       string bizAttribute = "", int sliceSize = SLICE_SIZE.SLIZE_SIZE_1M, int insertOnly = 1, bool isParallel = false)
+                                       string bizAttribute = "", int sliceSize = SLICE_SIZE.SLIZE_SIZE_1M, int insertOnly = 1, bool isParallel = false, int minConcurrency = 0)
         {
             var fileSha = SHA1.GetFileSHA1(localPath);
             var fileSize = new FileInfo(localPath).Length;
@@ -555,18 +558,29 @@ namespace QCloud.CosApi.Api
 
             if (isParallel)
             {
+                if (minConcurrency > 0)
+                {
+                    ThreadPool.SetMinThreads(minConcurrency, minConcurrency);
+                }
+
                 var tasks = new List<Task<string>>();
                 for (long offset = 0; offset < fileSize; offset += sliceSize)
                 {
                     long localOffset = offset;
-                    tasks.Add(Task.Factory.StartNew<string>(() => SliceUploadData(bucketName, remotePath, localPath, fileSha, session, localOffset, sliceSize, sign)));
+                    tasks.Add(Task.Factory.StartNew<string>(() => {
+                        //Console.WriteLine(Thread.CurrentThread.ManagedThreadId.ToString());
+                        return SliceUploadData(bucketName, remotePath, localPath, fileSha, session, localOffset, sliceSize, sign);
+                    }
+                    ));
+
+      
                 }
 
                 Task.WaitAll(tasks.ToArray());
 
                 foreach (var item in tasks)
                 {
-                    Console.WriteLine(item.Result);
+                    //Console.WriteLine(item.Result);
                     obj = (JObject)JsonConvert.DeserializeObject(item.Result);
                     if ((int)obj["code"] != 0)
                     {
