@@ -84,33 +84,33 @@ namespace QCloud.CosApi.Common
                         {
                             memStream.Write(beginBoundary, 0, beginBoundary.Length);
                             var fileInfo = new FileInfo(localPath);
-                            var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read);
-
-                            const string filePartHeader =
-                                "Content-Disposition: form-data; name=\"fileContent\"; filename=\"{0}\"\r\n" +
-                                "Content-Type: application/octet-stream\r\n\r\n";
-                            var headerText = string.Format(filePartHeader, fileInfo.Name);
-                            var headerbytes = Encoding.UTF8.GetBytes(headerText);
-                            memStream.Write(headerbytes, 0, headerbytes.Length);
-
-                            if (offset == -1)
+                            using (var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read))
                             {
-                                var buffer = new byte[1024];
-                                int bytesRead;
-                                while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) != 0)
+                                const string filePartHeader =
+                                    "Content-Disposition: form-data; name=\"fileContent\"; filename=\"{0}\"\r\n" +
+                                    "Content-Type: application/octet-stream\r\n\r\n";
+                                var headerText = string.Format(filePartHeader, fileInfo.Name);
+                                var headerbytes = Encoding.UTF8.GetBytes(headerText);
+                                memStream.Write(headerbytes, 0, headerbytes.Length);
+
+                                if (offset == -1)
                                 {
+                                    var buffer = new byte[1024];
+                                    int bytesRead;
+                                    while ((bytesRead = fileStream.Read(buffer, 0, buffer.Length)) != 0)
+                                    {
+                                        memStream.Write(buffer, 0, bytesRead);
+                                    }
+                                }
+                                else
+                                {
+                                    var buffer = new byte[sliceSize];
+                                    int bytesRead;
+                                    fileStream.Seek(offset, SeekOrigin.Begin);
+                                    bytesRead = fileStream.Read(buffer, 0, buffer.Length);
                                     memStream.Write(buffer, 0, bytesRead);
                                 }
                             }
-                            else
-                            {
-                                var buffer = new byte[sliceSize];
-                                int bytesRead;
-                                fileStream.Seek(offset, SeekOrigin.Begin);
-                                bytesRead = fileStream.Read(buffer, 0, buffer.Length);
-                                memStream.Write(buffer, 0, bytesRead);
-                            }
-                            fileStream.Close();
                         }
                         memStream.Write(endBoundary, 0, endBoundary.Length);
                     }
