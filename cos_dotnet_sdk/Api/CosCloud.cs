@@ -464,49 +464,51 @@ namespace QCloud.CosApi.Api
         {
             try
             {
-                byte[] buffer = new byte[sliceSize + 1];
+                   byte[] buffer = new byte[sliceSize + 1];
                 long offset = 0;    //文件的偏移
                 long totalLen = 0;  //总共读取的字节数
                 int readLen = 0;
                 var fileInfo = new FileInfo(localPath);
-                var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read);
+                
                 CosSha1Pure sha = new CosSha1Pure();
                 StringBuilder jsonStr = new StringBuilder();
 
                 jsonStr.Append("[");
 
-                for (int i = 0; offset < fileInfo.Length; ++i,offset+=readLen)
-                {
-                    fileStream.Seek(offset, SeekOrigin.Begin);
-                    readLen = fileStream.Read(buffer, 0, sliceSize);
-                    totalLen += readLen;
-                    string dataSha;
+                using (var fileStream = new FileStream(localPath, FileMode.Open, FileAccess.Read))
+                    for (int i = 0; offset < fileInfo.Length; ++i, offset += readLen)
+                    {
+                        fileStream.Seek(offset, SeekOrigin.Begin);
+                        readLen = fileStream.Read(buffer, 0, sliceSize);
+                        totalLen += readLen;
+                        string dataSha;
 
-                    sha.HashCore(buffer, 0, readLen);
-                    if ( (readLen < sliceSize) || (readLen == sliceSize && totalLen == fileInfo.Length ) )
-                    {
-                        //最后一片
-                        dataSha = sha.FinalHex();
-                    }
-                    else
-                    {
-                        //中间的分片
-                        dataSha = sha.GetDigest();
-                    }
+                        sha.HashCore(buffer, 0, readLen);
+                        if ((readLen < sliceSize) || (readLen == sliceSize && totalLen == fileInfo.Length))
+                        {
+                            //最后一片
+                            dataSha = sha.FinalHex();
+                        }
+                        else
+                        {
+                            //中间的分片
+                            dataSha = sha.GetDigest();
+                        }
 
-                    if (i != 0)
-                    {
-                        jsonStr.Append(",{\"offset\":" + offset + "," +
-                                       "\"datalen\":" + readLen + "," +
-                                       "\"datasha\":\"" + dataSha + "\"}");
+                        if (i != 0)
+                        {
+                            jsonStr.Append(",{\"offset\":" + offset + "," +
+                                           "\"datalen\":" + readLen + "," +
+                                           "\"datasha\":\"" + dataSha + "\"}");
+                        }
+                        else
+                        {
+                            jsonStr.Append("{\"offset\":" + offset + "," +
+                                           "\"datalen\":" + readLen + "," +
+                                           "\"datasha\":\"" + dataSha + "\"}");
+                        }
                     }
-                    else
-                    {
-                        jsonStr.Append("{\"offset\":" + offset + "," +
-                                       "\"datalen\":" + readLen + "," +
-                                       "\"datasha\":\"" + dataSha + "\"}");
-                    }
-                }
+                
                 
 
                 jsonStr.Append("]");
