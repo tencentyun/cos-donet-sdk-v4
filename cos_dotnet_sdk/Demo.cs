@@ -15,8 +15,8 @@ namespace QCloud.CosApi
     {
 
         const int APP_ID = 12516577;
-        const string SECRET_ID = "AKIDWtTCBYjM5OwLB9CAwAb2ThTSUjfGFO";
-        const string SECRET_KEY = "FZjRSu0mJ9YJijVXXYMAdCl4uylaA7";
+        const string SECRET_ID = "";
+        const string SECRET_KEY = "";
 
         static void Main(string[] args)
         {
